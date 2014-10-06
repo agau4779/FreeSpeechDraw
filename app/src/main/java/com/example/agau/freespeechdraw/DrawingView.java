@@ -22,6 +22,7 @@ public class DrawingView extends View {
     private Bitmap bitmap;
     private Path path;
     private boolean erase;
+    public int strokeWidth;
 
 
     public DrawingView(Context context, AttributeSet attrs) {
@@ -31,14 +32,14 @@ public class DrawingView extends View {
 
     private void setupDrawing() {
         int paintColor = 0xFF000000;
-
+        strokeWidth = 5;
         path = new Path();
         paint = new Paint();
         paint.setColor(paintColor);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeJoin(Paint.Join.ROUND);
         paint.setStrokeCap(Paint.Cap.ROUND);
-        paint.setStrokeWidth(4);
+        paint.setStrokeWidth(strokeWidth);
         erase = false;
     }
 
@@ -47,6 +48,7 @@ public class DrawingView extends View {
     }
 
     protected void changeStrokeWidth(int width) {
+        strokeWidth = width;
         paint.setStrokeWidth(width);
     }
 
@@ -95,6 +97,10 @@ public class DrawingView extends View {
         invalidate();
         return true;
 
+    }
+
+    public Paint getPaint() {
+        return paint;
     }
 
     public void startNew(){
