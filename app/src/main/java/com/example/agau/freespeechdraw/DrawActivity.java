@@ -1,9 +1,11 @@
 package com.example.agau.freespeechdraw;
 import java.util.UUID;
 
+import android.location.LocationManager;
 import android.media.Image;
 import android.content.Context;
 import android.os.Bundle;
+import java.io.FileOutputStream;
 import android.provider.MediaStore;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -20,12 +22,48 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.Constants;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.card.Card;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.card.ListCard;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.card.NotificationTextCard;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.card.SimpleTextCard;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.remote.DeckOfCardsManager;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.remote.RemoteDeckOfCards;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.remote.RemoteDeckOfCardsException;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.remote.RemoteResourceStore;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.remote.RemoteToqNotification;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.resource.CardImage;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.resource.DeckOfCardsLauncherIcon;
+import com.qualcomm.toq.smartwatch.api.v1.deckofcards.util.ParcelableUtil;
 
 
-public class DrawActivity extends Activity implements OnClickListener {
+
+public class DrawActivity extends Activity implements OnClickListener, LocationListener {
+    //Drawing-related instance variables
     private DrawingView dv;
     private ImageButton drawBtn, eraseBtn, newBtn, saveBtn, colorBtn;
-    private SeekBar seekbar;
+
+    //Location-related variables
+    protected LocationManager locationManager;
+    protected LocationListener locationListener;
+    protected Context context;
+    protected Location here, FSM;
+    protected boolean gps_enabled,network_enabled;
+
+    //Toq watch methods
+    private final static String PREFS_FILE= "prefs_file";
+    private final static String DECK_OF_CARDS_KEY= "deck_of_cards_key";
+    private final static String DECK_OF_CARDS_VERSION_KEY= "deck_of_cards_version_key";
+
+    private DeckOfCardsManager mDeckOfCardsManager;
+    private RemoteDeckOfCards mRemoteDeckOfCards;
+    private RemoteResourceStore mRemoteResourceStore;
+    private CardImage[] mCardImages;
+    private ToqReceiver toqReceiver;
 
     @Override
     public void onClick(View view) {
@@ -76,11 +114,11 @@ public class DrawActivity extends Activity implements OnClickListener {
             saveDialog.setTitle("Save drawing");
             saveDialog.setMessage("Save drawing to device?");
             saveDialog.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+                private FileOutputStream fOut;
+
                 public void onClick(DialogInterface dialog, int which){
                     //save drawing
-                    Bitmap screenshot;
                     dv.setDrawingCacheEnabled(true);
-                    screenshot = Bitmap.createBitmap(dv.getDrawingCache());
                     String imgSaved = MediaStore.Images.Media.insertImage(
                             DrawActivity.this.getContentResolver(), dv.getDrawingCache(),
                             UUID.randomUUID().toString() + ".png", "drawing");
@@ -135,6 +173,15 @@ public class DrawActivity extends Activity implements OnClickListener {
 
         colorBtn = (ImageButton)findViewById(R.id.color_picker);
         colorBtn.setOnClickListener(this);
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 0, 0, this);
+
+        here = new Location("here");
+        FSM = new Location("FSM");
+        FSM.setLatitude(37.86965);
+        FSM.setLongitude(-122.25914);
+
     }
 
 
@@ -143,5 +190,30 @@ public class DrawActivity extends Activity implements OnClickListener {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.draw, menu);
         return true;
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        here.setLatitude(location.getLatitude());
+        here.setLongitude(location.getLongitude());
+
+        if (here.distanceTo(FSM) < 50) {
+            ////trigger watch event when within 50 meters of Latitude: N 37.86965 and Longitude: W -122.25914 .
+        }
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
     }
 }
