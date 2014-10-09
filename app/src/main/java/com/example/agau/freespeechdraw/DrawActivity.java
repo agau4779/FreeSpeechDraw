@@ -46,6 +46,15 @@ import com.qualcomm.toq.smartwatch.api.v1.deckofcards.resource.CardImage;
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.resource.DeckOfCardsLauncherIcon;
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.util.ParcelableUtil;
 
+//Flickr libraries
+import com.googlecode.flickrjandroid.Flickr;
+import com.googlecode.flickrjandroid.FlickrException;
+import com.googlecode.flickrjandroid.REST;
+import com.googlecode.flickrjandroid.photos.Photo;
+import com.googlecode.flickrjandroid.photos.PhotoList;
+import com.googlecode.flickrjandroid.photos.PhotosInterface;
+import com.googlecode.flickrjandroid.photos.SearchParameters;
+import org.json.JSONException;
 
 
 public class DrawActivity extends Activity implements OnClickListener, LocationListener {
@@ -102,6 +111,9 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 0, 0, this);
 
+		private static final String API_KEY = "bc003a9bc0dc589320334ddf2d52abd3"; //$NON-NLS-1$
+		public static final String API_SEC = "9b055a14088b048e";
+		
         here = new Location("here");
         FSM = new Location("FSM");
         FSM.setLatitude(37.86965);
@@ -220,7 +232,9 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             break;
         case R.id.submit_btn:
             if (last_drawing!=null) {
-
+				Intent intent = new Intent(getApplicationContext(), FlickrjActivity.class);
+				intent.putExtra(last_drawing, fileUri.getAbsolutePath());
+				startActivity(intent);
             } else {
                 Toast.makeText(this.getApplicationContext(), "Please save your image first!", Toast.LENGTH_SHORT).show();
             }
