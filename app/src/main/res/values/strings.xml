@@ -14,6 +14,7 @@
     <string name="submit">Submit</string>
     <string name="install_toq">Install Toq Applet</string>
     <string name="uninstall_toq">Uninstall Toq Applet</string>
+    <string name="trigger_notification">Trigger Toq Request</string>
     <string name="error_initialising_icons">Can\'t initialize icons</string>
     <string name="error_initialising_card_images">Can\'t initialize card images</string>
     <string name="error_uninstalling_deck_of_cards">Can\'t uninstall deck of cards</string>

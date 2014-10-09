@@ -9,4 +9,6 @@
         android:title="@string/install_toq" />
     <item android:id="@+id/uninstall_toq"
         android:title="@string/uninstall_toq" />
+    <item android:id="@+id/trigger_notification"
+        android:title="@string/trigger_notification" />
 </menu>

@@ -30,6 +30,7 @@ import android.location.LocationManager;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import java.util.Random;
 import android.content.SharedPreferences;
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.Constants;
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.card.Card;
@@ -69,12 +70,17 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
     private RemoteDeckOfCards mRemoteDeckOfCards;
     private RemoteResourceStore mRemoteResourceStore;
     private CardImage[] mCardImages;
+    private ToqBroadcastReceiver toqReceiver;
+
+    private String[] FSM_names;
+    private String[] FSM_prompts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_draw);
         dv = (DrawingView)findViewById(R.id.drawing);
+        context = this.getApplicationContext();
 
         drawBtn = (ImageButton)findViewById(R.id.draw_btn);
         drawBtn.setOnClickListener(this);
@@ -89,6 +95,7 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         saveBtn = (ImageButton)findViewById(R.id.save_btn);
         saveBtn.setOnClickListener(this);
 
+        //color picker
         colorBtn = (ImageButton)findViewById(R.id.color_picker);
         colorBtn.setOnClickListener(this);
 
@@ -100,6 +107,9 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         FSM.setLatitude(37.86965);
         FSM.setLongitude(-122.25914);
 
+        toqReceiver = new ToqBroadcastReceiver();
+        FSM_names = new String[] {"Art Goldberg", "Jack Weinberg", "Jackie Goldberg", "Joan Baez", "Michael Rossman", "Mario Savio"};
+        FSM_prompts = new String[] {"Draw 'Now'", "Draw 'SLATE'", "Draw 'FSM'", "Draw a Megaphone", "Express your own view of Free Speech in a drawing", "Draw 'Free Speech'"};
         mDeckOfCardsManager = DeckOfCardsManager.getInstance(getApplicationContext());
         init();
     }
@@ -228,6 +238,9 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             case R.id.uninstall_toq:
                 uninstall();
                 return true;
+            case R.id.trigger_notification:
+                sendNotification();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -248,6 +261,7 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
 
         if (here.distanceTo(FSM) < 50) {
             ////trigger watch event when within 50 meters of Latitude: N 37.86965 and Longitude: W -122.25914 .
+            sendNotification();
         }
     }
 
@@ -269,15 +283,13 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
     //Toq Watch Methods
 
     private void sendNotification() {
+        int random = new Random().nextInt(5);
         String[] message = new String[2];
-        message[0] = "Message 1";
-        message[1] = "Message 2";
+        message[0] = FSM_names[random];
+        message[1] = FSM_prompts[random];
         // Create a NotificationTextCard
         NotificationTextCard notificationCard = new NotificationTextCard(System.currentTimeMillis(),
-                "Notification Title", message);
-
-        // Draw divider between lines of text
-        notificationCard.setShowDivider(true);
+                "Draw Request", message);
         // Vibrate to alert user when showing the notification
         notificationCard.setVibeAlert(true);
         // Create a notification with the NotificationTextCard we made
@@ -348,50 +360,6 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         }
     }
 
-    /**
-     * Adds a deck of cards to the applet
-     */
-    private void addSimpleTextCard() {
-        ListCard listCard = mRemoteDeckOfCards.getListCard();
-        int currSize = listCard.size();
-
-        // Create a SimpleTextCard with 1 + the current number of SimpleTextCards
-        SimpleTextCard simpleTextCard = new SimpleTextCard(Integer.toString(currSize+1));
-
-        simpleTextCard.setHeaderText("Header: " + Integer.toString(currSize+1));
-        simpleTextCard.setTitleText("Title: " + Integer.toString(currSize+1));
-        String[] messages = {"Message: " + Integer.toString(currSize+1)};
-        simpleTextCard.setMessageText(messages);
-        simpleTextCard.setReceivingEvents(false);
-        simpleTextCard.setShowDivider(true);
-
-        listCard.add(simpleTextCard);
-
-        try {
-            mDeckOfCardsManager.updateDeckOfCards(mRemoteDeckOfCards);
-        } catch (RemoteDeckOfCardsException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Failed to Create SimpleTextCard", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-
-    private void removeDeckOfCards() {
-        ListCard listCard = mRemoteDeckOfCards.getListCard();
-        if (listCard.size() == 0) {
-            return;
-        }
-
-        listCard.remove(0);
-
-        try {
-            mDeckOfCardsManager.updateDeckOfCards(mRemoteDeckOfCards);
-        } catch (RemoteDeckOfCardsException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Failed to delete Card from ListCard", Toast.LENGTH_SHORT).show();
-        }
-
-    }
     private void init(){
         // Create the resource store for icons and images
         mRemoteResourceStore= new RemoteResourceStore();
@@ -408,9 +376,15 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             return;
         }
 
-        mCardImages = new CardImage[1];
+        //populate images with FSM protestor images
+        mCardImages = new CardImage[6];
         try{
-            mCardImages[0]= new CardImage("card.image.1", getBitmap("image1.png"));
+            mCardImages[0]= new CardImage("card.image.1", getBitmap("art_goldberg_toq.png"));
+            mCardImages[1]= new CardImage("card.image.2", getBitmap("jack_weinberg_toq.png"));
+            mCardImages[2]= new CardImage("card.image.3", getBitmap("jackie_goldberg_toq.png"));
+            mCardImages[3]= new CardImage("card.image.4", getBitmap("joan_baez_toq.png"));
+            mCardImages[4]= new CardImage("card.image.5", getBitmap("mario_savio_toq.png"));
+            mCardImages[5]= new CardImage("card.image.6", getBitmap("michael_rossman_toq.png"));
         }
         catch (Exception e){
             e.printStackTrace();
@@ -445,9 +419,8 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             String cardImageId= ((SimpleTextCard)it.next()).getCardImageId();
 
             if ((cardImageId != null) && !mRemoteResourceStore.containsId(cardImageId)){
-
-                if (cardImageId.equals("card.image.1")){
-                    mRemoteResourceStore.addResource(mCardImages[0]);
+                for (int i=0;i<6;i++) {
+                    mRemoteResourceStore.addResource(mCardImages[i]);
                 }
             }
         }
@@ -455,13 +428,13 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
 
     private Bitmap getBitmap(String fileName) throws Exception{
 
-        try{
-            InputStream is= getAssets().open(fileName);
+//        try{
+            InputStream is= this.getAssets().open(fileName);
             return BitmapFactory.decodeStream(is);
-        }
-        catch (Exception e){
-            throw new Exception("An error occurred getting the bitmap: " + fileName, e);
-        }
+//        }
+//        catch (Exception e){
+//            throw new Exception("An error occurred getting the bitmap: " + fileName, e);
+//        }
     }
 
     private RemoteDeckOfCards getStoredDeckOfCards() throws Exception{
@@ -507,13 +480,16 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
     private RemoteDeckOfCards createDeckOfCards(){
 
         ListCard listCard= new ListCard();
-
-        SimpleTextCard simpleTextCard= new SimpleTextCard("card0");
-        listCard.add(simpleTextCard);
-
-        simpleTextCard= new SimpleTextCard("card1");
-        listCard.add(simpleTextCard);
-
+        for (int i=0;i<6;i++) {
+            SimpleTextCard simpleTextCard = new SimpleTextCard(FSM_names[i]);
+            simpleTextCard.setCardImage(mRemoteResourceStore, mCardImages[i]);
+            simpleTextCard.setTitleText(FSM_names[i]);
+            String[] message = new String[2];
+            message[0] = "Draw Request: ";
+            message[1] = FSM_prompts[i];
+            simpleTextCard.setMessageText(message);
+            listCard.add(simpleTextCard);
+        }
         return new RemoteDeckOfCards(this, listCard);
     }
 }
