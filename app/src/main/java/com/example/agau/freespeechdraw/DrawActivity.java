@@ -1,8 +1,12 @@
 package com.example.agau.freespeechdraw;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.UUID;
 
+import android.content.Intent;
+import android.graphics.drawable.BitmapDrawable;
 import android.location.LocationManager;
 import android.content.Context;
 import android.os.Bundle;
@@ -14,6 +18,7 @@ import android.content.DialogInterface;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -48,20 +53,26 @@ import com.qualcomm.toq.smartwatch.api.v1.deckofcards.resource.DeckOfCardsLaunch
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.util.ParcelableUtil;
 
 //Flickr libraries
-//import com.googlecode.flickrjandroid.Flickr;
-//import com.googlecode.flickrjandroid.FlickrException;
-//import com.googlecode.flickrjandroid.REST;
-//import com.googlecode.flickrjandroid.photos.Photo;
-//import com.googlecode.flickrjandroid.photos.PhotoList;
-//import com.googlecode.flickrjandroid.photos.PhotosInterface;
-//import com.googlecode.flickrjandroid.photos.SearchParameters;
-//import org.json.JSONException;
+import com.example.gmail.yuyang226.flickrj.sample.android.FlickrHelper;
+import com.example.gmail.yuyang226.flickrj.sample.android.FlickrjActivity;
+import com.googlecode.flickrjandroid.Flickr;
+import com.googlecode.flickrjandroid.FlickrException;
+import com.googlecode.flickrjandroid.REST;
+import com.googlecode.flickrjandroid.photos.Photo;
+import com.googlecode.flickrjandroid.photos.PhotoList;
+import com.googlecode.flickrjandroid.photos.PhotosInterface;
+import com.googlecode.flickrjandroid.photos.SearchParameters;
+
+import org.json.JSONException;
+
+import javax.xml.parsers.ParserConfigurationException;
 
 
 public class DrawActivity extends Activity implements OnClickListener, LocationListener {
     //Drawing-related instance variables
     private DrawingView dv;
     private ImageButton drawBtn, eraseBtn, newBtn, saveBtn, colorBtn;
+    private Button submitBtn;
     private String last_drawing;
 
     //Location-related variables
@@ -84,9 +95,6 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
 
     private String[] FSM_names;
     private String[] FSM_prompts;
-
-    private static String API_KEY;
-    private static String API_SEC;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,11 +120,12 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         colorBtn = (ImageButton)findViewById(R.id.color_picker);
         colorBtn.setOnClickListener(this);
 
+        //submit to Flickr
+        submitBtn = (Button)findViewById(R.id.submit_btn);
+        submitBtn.setOnClickListener(this);
+
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 0, 0, this);
-
-		API_KEY = "bc003a9bc0dc589320334ddf2d52abd3"; //$NON-NLS-1$
-		API_SEC = "9b055a14088b048e";
 		
         here = new Location("here");
         FSM = new Location("FSM");
@@ -182,7 +191,20 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         int id = view.getId();
         switch(id) {
         case R.id.new_btn:
-            dv.startNew();
+            AlertDialog.Builder newDialog = new AlertDialog.Builder(this);
+            newDialog.setTitle("New Drawing?");
+            newDialog.setMessage("Start a new drawing? You will lose your current drawing.");
+            newDialog.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    dv.startNew();
+                }
+            });
+            newDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener(){
+                public void onClick(DialogInterface dialog, int which){
+                    dialog.cancel();
+                }
+            });
+            newDialog.show();
             break;
         case R.id.draw_btn:
             brushDialog.show();
@@ -303,14 +325,25 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
                 }
             });
         case R.id.submit_btn:
-//            if (last_drawing!=null) {
-//				Intent intent = new Intent(getApplicationContext(), FlickrjActivity.class);
-//				intent.putExtra(last_drawing, fileUri.getAbsolutePath());
-//				startActivity(intent);
-//            } else {
-//                Toast.makeText(this.getApplicationContext(), "Please save your image first!", Toast.LENGTH_SHORT).show();
-//            }
-//            break;
+            if (last_drawing == null) {
+                Toast.makeText(this.getApplicationContext(), "Please save your drawing first!",
+                        Toast.LENGTH_SHORT).show();
+//
+//                Bitmap bitmap = dv.getBitmap();
+//                Intent intent = new Intent(getApplicationContext(),
+//                        FlickrjActivity.class);
+//                //intent.putExtra("flickImage", bitmap);
+//                startActivity(intent);
+            } else {
+
+                Intent intent = new Intent(this.getApplicationContext(),
+                        FlickrjActivity.class);
+                File f = new File(last_drawing);
+                intent.putExtra("flickImagePath", f.getAbsolutePath());
+
+                startActivity(intent);
+                //downloadImage();
+            }
         }
     }
 
@@ -477,7 +510,7 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         }
 
         //populate images with FSM protestor images
-        mCardImages = new CardImage[6];
+        mCardImages = new CardImage[7];
         try{
             mCardImages[0]= new CardImage("card.image.1", getBitmap("art_goldberg_toq.png"));
             mCardImages[1]= new CardImage("card.image.2", getBitmap("jack_weinberg_toq.png"));
@@ -528,13 +561,33 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
 
     private Bitmap getBitmap(String fileName) throws Exception{
 
-//        try{
+        try{
             InputStream is= this.getAssets().open(fileName);
             return BitmapFactory.decodeStream(is);
-//        }
-//        catch (Exception e){
-//            throw new Exception("An error occurred getting the bitmap: " + fileName, e);
-//        }
+        }
+        catch (Exception e){
+            throw new Exception("An error occurred getting the bitmap: " + fileName, e);
+        }
+    }
+
+    private void addToqImageCard(String uri) {
+        ListCard listCard = mRemoteDeckOfCards.getListCard();
+        SimpleTextCard simpleTextCard = new SimpleTextCard("Free Speech Movement");
+        simpleTextCard.setHeaderText("CS160 - FSM");
+        simpleTextCard.setReceivingEvents(false);
+        simpleTextCard.setShowDivider(true);
+
+        try {
+            mCardImages[6]= new CardImage("card.image.1", getBitmap(uri));
+            mRemoteResourceStore.addResource(mCardImages[6]);
+            simpleTextCard.setCardImage(mRemoteResourceStore, mCardImages[6]);
+            listCard.add(simpleTextCard);
+
+            mDeckOfCardsManager.updateDeckOfCards(mRemoteDeckOfCards);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Failed to Create SimpleTextCard", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private RemoteDeckOfCards getStoredDeckOfCards() throws Exception{
@@ -591,5 +644,68 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             listCard.add(simpleTextCard);
         }
         return new RemoteDeckOfCards(this, listCard);
+    }
+
+    private void downloadImage() {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    String svr="www.flickr.com";
+
+                    REST rest=new REST();
+                    rest.setHost(svr);
+
+                    //initialize Flickr object with key and rest
+                    Flickr flickr=new Flickr(FlickrHelper.API_KEY,rest);
+
+                    //initialize SearchParameter object, this object stores the search keyword
+                    SearchParameters searchParams=new SearchParameters();
+                    searchParams.setSort(SearchParameters.INTERESTINGNESS_DESC);
+
+                    //Create tag keyword array
+                    String[] tags=new String[]{"cs160fsm"};
+                    searchParams.setTags(tags);
+
+                    //Initialize PhotosInterface object
+                    PhotosInterface photosInterface=flickr.getPhotosInterface();
+                    //Execute search with entered tags
+                    PhotoList photoList=photosInterface.search(searchParams,20,1);
+
+                    //get search result and fetch the photo object and get small square imag's url
+                    if(photoList!=null){
+                        //Get search result and check the size of photo result
+                        Random random = new Random();
+                        int seed = random.nextInt(photoList.size());
+                        //get photo object
+                        Photo photo=(Photo)photoList.get(seed);
+
+                        //Get small square url photo
+                        InputStream is = photo.getMediumAsStream();
+                        final Bitmap bm = BitmapFactory.decodeStream(is);
+                        final String name = UUID.randomUUID().toString() + ".png";
+                        String imgSaved = MediaStore.Images.Media.insertImage(
+                                DrawActivity.this.getContentResolver(), bm,
+                                name, "drawing");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                addToqImageCard(name);
+                            }
+                        });
+                    }
+                } catch (ParserConfigurationException e) {
+                    e.printStackTrace();
+                } catch (FlickrException e) {
+                    e.printStackTrace();
+                } catch (IOException e ) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        thread.start();
     }
 }

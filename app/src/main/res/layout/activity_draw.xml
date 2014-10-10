@@ -60,7 +60,6 @@
             android:id="@+id/submit_btn"
             android:text="@string/submit"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent"
-            android:contentDescription="@string/submit"/>
+            android:layout_height="fill_parent"/>
     </LinearLayout>
 </LinearLayout>
