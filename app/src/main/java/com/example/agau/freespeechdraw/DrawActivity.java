@@ -30,6 +30,7 @@ import android.location.LocationManager;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import java.util.Random;
 import android.content.SharedPreferences;
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.Constants;
@@ -47,14 +48,14 @@ import com.qualcomm.toq.smartwatch.api.v1.deckofcards.resource.DeckOfCardsLaunch
 import com.qualcomm.toq.smartwatch.api.v1.deckofcards.util.ParcelableUtil;
 
 //Flickr libraries
-import com.googlecode.flickrjandroid.Flickr;
-import com.googlecode.flickrjandroid.FlickrException;
-import com.googlecode.flickrjandroid.REST;
-import com.googlecode.flickrjandroid.photos.Photo;
-import com.googlecode.flickrjandroid.photos.PhotoList;
-import com.googlecode.flickrjandroid.photos.PhotosInterface;
-import com.googlecode.flickrjandroid.photos.SearchParameters;
-import org.json.JSONException;
+//import com.googlecode.flickrjandroid.Flickr;
+//import com.googlecode.flickrjandroid.FlickrException;
+//import com.googlecode.flickrjandroid.REST;
+//import com.googlecode.flickrjandroid.photos.Photo;
+//import com.googlecode.flickrjandroid.photos.PhotoList;
+//import com.googlecode.flickrjandroid.photos.PhotosInterface;
+//import com.googlecode.flickrjandroid.photos.SearchParameters;
+//import org.json.JSONException;
 
 
 public class DrawActivity extends Activity implements OnClickListener, LocationListener {
@@ -84,6 +85,9 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
     private String[] FSM_names;
     private String[] FSM_prompts;
 
+    private static String API_KEY;
+    private static String API_SEC;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -111,8 +115,8 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 0, 0, this);
 
-		private static final String API_KEY = "bc003a9bc0dc589320334ddf2d52abd3"; //$NON-NLS-1$
-		public static final String API_SEC = "9b055a14088b048e";
+		API_KEY = "bc003a9bc0dc589320334ddf2d52abd3"; //$NON-NLS-1$
+		API_SEC = "9b055a14088b048e";
 		
         here = new Location("here");
         FSM = new Location("FSM");
@@ -223,23 +227,105 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             saveDialog.show();
             break;
         case R.id.color_picker:
-            Context context = this.getApplicationContext();
-            ColorPicker c = new ColorPicker( context, new ColorPicker.OnColorChangedListener() {
+            final Dialog colorDialog = new Dialog(this);
+            colorDialog.setTitle("Pick Color");
+            colorDialog.setContentView(R.layout.color_picker);
+            final SeekBar red = (SeekBar)colorDialog.findViewById(R.id.color_red);
+            final SeekBar blue = (SeekBar)colorDialog.findViewById(R.id.color_blue);
+            final SeekBar green = (SeekBar)colorDialog.findViewById(R.id.color_green);
+            
+            red.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+                int value = 0;
+                String color = "FF";
+                LinearLayout layout  = (LinearLayout) colorDialog.findViewById(R.id.color_confirm);
                 @Override
-                    public void colorChanged(int color) {
-                    }
-                }, dv.getPaint().getColor());
-            break;
+                public void onProgressChanged(SeekBar seekBar, int newValue, boolean fromUser) {
+                    layout.setBackgroundColor(Color.parseColor(toHex(value, green.getProgress(), blue.getProgress(), 255)));
+                    value = newValue;
+                }
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    color = Integer.toHexString(value);
+                    layout.setBackgroundColor(Color.parseColor(toHex(value, green.getProgress(), blue.getProgress(), 255)));
+                }
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    layout.setBackgroundColor(Color.parseColor(toHex(value, green.getProgress(), blue.getProgress(), 255)));
+                    Toast.makeText(getApplicationContext(), "Red set to " + value + ".", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            blue.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+                int value = 0;
+                LinearLayout layout  = (LinearLayout) colorDialog.findViewById(R.id.color_confirm);
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int newValue, boolean fromUser) {
+                    value = newValue;
+                    layout.setBackgroundColor(Color.parseColor(toHex(red.getProgress(), green.getProgress(), value, 255)));
+                }
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    layout.setBackgroundColor(Color.parseColor(toHex(red.getProgress(), green.getProgress(), value, 255)));
+                }
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    layout.setBackgroundColor(Color.parseColor(toHex(red.getProgress(), green.getProgress(), value, 255)));
+                    Toast.makeText(getApplicationContext(), "Blue set to " + value + ".", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            green.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+                int value = 0;
+                LinearLayout layout  = (LinearLayout) colorDialog.findViewById(R.id.color_confirm);
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int newValue, boolean fromUser) {
+                    value = newValue;
+                    layout.setBackgroundColor(Color.parseColor(toHex(red.getProgress(), value, blue.getProgress(), 255)));
+                }
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    layout.setBackgroundColor(Color.parseColor(toHex(red.getProgress(), value, blue.getProgress(), 255)));
+                }
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    layout.setBackgroundColor(Color.parseColor(toHex(red.getProgress(), value, blue.getProgress(), 255)));
+                    Toast.makeText(getApplicationContext(), "Green set to " + value + ".", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            colorDialog.show();
+            Button c = (Button) colorDialog.findViewById(R.id.confirm);
+            c.setOnClickListener(new OnClickListener(){
+                @Override
+                public void onClick(View v) {
+                    dv.changeColor(Color.parseColor(toHex(red.getProgress(), green.getProgress(), blue.getProgress(), 255)));
+                    colorDialog.dismiss();
+                }
+            });
         case R.id.submit_btn:
-            if (last_drawing!=null) {
-				Intent intent = new Intent(getApplicationContext(), FlickrjActivity.class);
-				intent.putExtra(last_drawing, fileUri.getAbsolutePath());
-				startActivity(intent);
-            } else {
-                Toast.makeText(this.getApplicationContext(), "Please save your image first!", Toast.LENGTH_SHORT).show();
-            }
-            break;
+//            if (last_drawing!=null) {
+//				Intent intent = new Intent(getApplicationContext(), FlickrjActivity.class);
+//				intent.putExtra(last_drawing, fileUri.getAbsolutePath());
+//				startActivity(intent);
+//            } else {
+//                Toast.makeText(this.getApplicationContext(), "Please save your image first!", Toast.LENGTH_SHORT).show();
+//            }
+//            break;
         }
+    }
+
+
+    //Below two methods are from: http://sny.no/2011/11/java-hex
+    public static String toHex(int r, int g, int b, int a) {
+        return "#" + toBrowserHexValue(r) + toBrowserHexValue(g) + toBrowserHexValue(b);
+    }
+
+    private static String toBrowserHexValue(int number) {
+        StringBuilder builder = new StringBuilder(Integer.toHexString(number & 0xff));
+        while (builder.length() < 2) {
+            builder.append("0");
+        }
+        return builder.toString().toUpperCase();
     }
 
     @Override

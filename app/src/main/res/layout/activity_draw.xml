@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF444444"
+    android:background="#FF3A3A3A"
     android:orientation="vertical"
     tools:context=".MainActivity" >
     <LinearLayout
@@ -39,7 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="fill_parent"
             android:contentDescription="@string/color_picker"
-            android:src="@drawable/save" />
+            android:src="@drawable/color" />
     </LinearLayout>
     <com.example.agau.freespeechdraw.DrawingView
         android:id="@+id/drawing"
@@ -58,6 +58,7 @@
         android:orientation="horizontal" >
         <Button
             android:id="@+id/submit_btn"
+            android:text="@string/submit"
             android:layout_width="wrap_content"
             android:layout_height="fill_parent"
             android:contentDescription="@string/submit"/>
