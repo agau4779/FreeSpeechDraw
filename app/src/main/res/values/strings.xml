@@ -11,6 +11,7 @@
     <string name="color_picker">Color Picker</string>
     <string name="action_settings">Settings</string>
     <string name="confirm">OK</string>
+    <string name="pick">Pick Drawing</string>
     <string name="submit">Submit</string>
     <string name="install_toq">Install Toq Applet</string>
     <string name="uninstall_toq">Uninstall Toq Applet</string>

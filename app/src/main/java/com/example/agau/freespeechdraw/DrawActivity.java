@@ -1,5 +1,6 @@
 package com.example.agau.freespeechdraw;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -28,6 +29,8 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import android.database.Cursor;
+import android.net.Uri;
 
 import android.location.Location;
 import android.location.LocationListener;
@@ -72,8 +75,9 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
     //Drawing-related instance variables
     private DrawingView dv;
     private ImageButton drawBtn, eraseBtn, newBtn, saveBtn, colorBtn;
-    private Button submitBtn;
-    private String last_drawing;
+    private Button pickBtn, submitBtn;
+    private Uri last_drawing;
+    private Bitmap bmp;
 
     //Location-related variables
     protected LocationManager locationManager;
@@ -119,6 +123,10 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
         //color picker
         colorBtn = (ImageButton)findViewById(R.id.color_picker);
         colorBtn.setOnClickListener(this);
+
+        //pick for Flickr submission
+        pickBtn = (Button)findViewById(R.id.pick_btn);
+        pickBtn.setOnClickListener(this);
 
         //submit to Flickr
         submitBtn = (Button)findViewById(R.id.submit_btn);
@@ -223,10 +231,10 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
                 public void onClick(DialogInterface dialog, int which){
                     //save drawing
                     dv.setDrawingCacheEnabled(true);
-                    last_drawing = UUID.randomUUID().toString() + ".png";
+                    String drawing = UUID.randomUUID().toString() + ".png";
                     String imgSaved = MediaStore.Images.Media.insertImage(
                             DrawActivity.this.getContentResolver(), dv.getDrawingCache(),
-                            last_drawing, "drawing");
+                            drawing, "drawing");
                     //feedback
                     if(imgSaved!=null){
                         Toast savedToast = Toast.makeText(getApplicationContext(),
@@ -324,29 +332,46 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
                     colorDialog.dismiss();
                 }
             });
+            break;
+        case R.id.pick_btn:
+            Intent photoPickerIntent = new Intent();
+            photoPickerIntent.setType("image/*");
+            photoPickerIntent.setAction(Intent.ACTION_GET_CONTENT);
+            photoPickerIntent.setFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            startActivityForResult(photoPickerIntent, 100);
+            break;
         case R.id.submit_btn:
-            if (last_drawing == null) {
-                Toast.makeText(this.getApplicationContext(), "Please save your drawing first!",
-                        Toast.LENGTH_SHORT).show();
-//
-//                Bitmap bitmap = dv.getBitmap();
-//                Intent intent = new Intent(getApplicationContext(),
-//                        FlickrjActivity.class);
-//                //intent.putExtra("flickImage", bitmap);
-//                startActivity(intent);
+            if (last_drawing==null) {
+                Toast.makeText(getApplicationContext(), "Please pick a photo first!", Toast.LENGTH_SHORT).show();
             } else {
-
                 Intent intent = new Intent(this.getApplicationContext(),
                         FlickrjActivity.class);
-                File f = new File(last_drawing);
-                intent.putExtra("flickImagePath", f.getAbsolutePath());
-
+                intent.putExtra("flickImagePath", getPath(last_drawing));
                 startActivity(intent);
-                //downloadImage();
+                Toast.makeText(getApplicationContext(), "Submitted photo to Flickr!", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) {
+        super.onActivityResult(requestCode, resultCode, imageReturnedIntent);
+
+        switch(requestCode) {
+            case 100:
+                try {
+                    if (resultCode == RESULT_OK) {
+                        Uri selectedImage = imageReturnedIntent.getData();
+                        last_drawing = selectedImage;
+                        InputStream imageStream = this.getContentResolver().openInputStream(selectedImage);
+                        bmp = BitmapFactory.decodeStream(imageStream);
+                        Log.d(Constants.TAG, last_drawing.toString());
+                    }
+                } catch (FileNotFoundException e) {
+                    //asadsads
+                }
+        }
+    }
 
     //Below two methods are from: http://sny.no/2011/11/java-hex
     public static String toHex(int r, int g, int b, int a) {
@@ -359,6 +384,16 @@ public class DrawActivity extends Activity implements OnClickListener, LocationL
             builder.append("0");
         }
         return builder.toString().toUpperCase();
+    }
+
+    public String getPath(Uri uri) {
+        String[] projection = { MediaStore.Images.Media.DATA };
+        @SuppressWarnings("deprecation")
+        Cursor cursor = managedQuery(uri, projection, null, null, null);
+        int column_index = cursor
+                .getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        cursor.moveToFirst();
+        return cursor.getString(column_index);
     }
 
     @Override

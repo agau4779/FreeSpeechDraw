@@ -14,8 +14,8 @@ public final class FlickrHelper {
 
 	private static FlickrHelper instance = null;
     //API Keys for Ashley Gau
-    public static final String API_KEY = "bc003a9bc0dc589320334ddf2d52abd3";
-    private static final String API_SEC = "9b055a14088b048e";
+    public static final String API_KEY = "81711c6a8adbbacc04739debe25788393";
+    private static final String API_SEC = "41cdf883c7d5120c";
 
 	private FlickrHelper() {
 
